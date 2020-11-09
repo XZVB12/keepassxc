@@ -24,9 +24,9 @@
 #include <QDir>
 
 #include "core/Config.h"
-#include "core/Resources.h"
 #include "entry/EntryAttachmentsModel.h"
 #include "gui/Clipboard.h"
+#include "gui/Icons.h"
 #if defined(WITH_XC_KEESHARE)
 #include "keeshare/KeeShare.h"
 #endif
@@ -48,12 +48,11 @@ EntryPreviewWidget::EntryPreviewWidget(QWidget* parent)
     m_ui->setupUi(this);
 
     // Entry
-    m_ui->entryTotpButton->setIcon(resources()->icon("chronometer"));
-    m_ui->entryCloseButton->setIcon(resources()->icon("dialog-close"));
-    m_ui->entryPasswordLabel->setFont(Font::fixedFont());
-    m_ui->togglePasswordButton->setIcon(resources()->onOffIcon("password-show"));
-    m_ui->toggleEntryNotesButton->setIcon(resources()->onOffIcon("password-show"));
-    m_ui->toggleGroupNotesButton->setIcon(resources()->onOffIcon("password-show"));
+    m_ui->entryTotpButton->setIcon(icons()->icon("chronometer"));
+    m_ui->entryCloseButton->setIcon(icons()->icon("dialog-close"));
+    m_ui->togglePasswordButton->setIcon(icons()->onOffIcon("password-show"));
+    m_ui->toggleEntryNotesButton->setIcon(icons()->onOffIcon("password-show"));
+    m_ui->toggleGroupNotesButton->setIcon(icons()->onOffIcon("password-show"));
 
     m_ui->entryAttachmentsWidget->setReadOnly(true);
     m_ui->entryAttachmentsWidget->setButtonsVisible(false);
@@ -84,7 +83,7 @@ EntryPreviewWidget::EntryPreviewWidget(QWidget* parent)
     });
 
     // Group
-    m_ui->groupCloseButton->setIcon(resources()->icon("dialog-close"));
+    m_ui->groupCloseButton->setIcon(icons()->icon("dialog-close"));
     connect(m_ui->groupCloseButton, SIGNAL(clicked()), SLOT(hide()));
     connect(m_ui->groupTabWidget, SIGNAL(tabBarClicked(int)), SLOT(updateTabIndexes()), Qt::QueuedConnection);
 
@@ -194,6 +193,7 @@ void EntryPreviewWidget::setPasswordVisible(bool state)
     if (state) {
         m_ui->entryPasswordLabel->setText(password);
         m_ui->entryPasswordLabel->setCursorPosition(0);
+        m_ui->entryPasswordLabel->setFont(Font::fixedFont());
     } else if (password.isEmpty() && !config()->get(Config::Security_PasswordEmptyPlaceholder).toBool()) {
         m_ui->entryPasswordLabel->setText("");
     } else {

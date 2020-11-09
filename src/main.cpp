@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
- *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
+ *  Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@
 
 #include "cli/Utils.h"
 #include "config-keepassx.h"
-#include "core/Bootstrap.h"
 #include "core/Config.h"
 #include "core/Tools.h"
 #include "crypto/Crypto.h"
@@ -52,55 +51,51 @@ int main(int argc, char** argv)
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0) && defined(Q_OS_WIN)
     QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
 #endif
-
-    Application app(argc, argv);
-    Application::setApplicationName("KeePassXC");
-    Application::setApplicationVersion(KEEPASSXC_VERSION);
-    app.setProperty("KPXC_QUALIFIED_APPNAME", "org.keepassxc.KeePassXC");
-    app.applyTheme();
-#if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
-    QGuiApplication::setDesktopFileName(app.property("KPXC_QUALIFIED_APPNAME").toString() + QStringLiteral(".desktop"));
-#endif
-
-    // don't set organizationName as that changes the return value of
-    // QStandardPaths::writableLocation(QDesktopServices::DataLocation)
-    Bootstrap::bootstrapApplication();
 
     QCommandLineParser parser;
     parser.setApplicationDescription(QObject::tr("KeePassXC - cross-platform password manager"));
     parser.addPositionalArgument(
-        "filename", QObject::tr("filenames of the password databases to open (*.kdbx)"), "[filename(s)]");
+        "filename(s)", QObject::tr("filenames of the password databases to open (*.kdbx)"), "[filename(s)]");
 
     QCommandLineOption configOption("config", QObject::tr("path to a custom config file"), "config");
+    QCommandLineOption localConfigOption(
+        "localconfig", QObject::tr("path to a custom local config file"), "localconfig");
     QCommandLineOption keyfileOption("keyfile", QObject::tr("key file of the database"), "keyfile");
     QCommandLineOption pwstdinOption("pw-stdin", QObject::tr("read password of the database from stdin"));
-    // This is needed under Windows where clients send --parent-window parameter with Native Messaging connect method
-    QCommandLineOption parentWindowOption(QStringList() << "pw"
-                                                        << "parent-window",
-                                          QObject::tr("Parent window handle"),
-                                          "handle");
 
     QCommandLineOption helpOption = parser.addHelpOption();
     QCommandLineOption versionOption = parser.addVersionOption();
     QCommandLineOption debugInfoOption(QStringList() << "debug-info", QObject::tr("Displays debugging information."));
     parser.addOption(configOption);
+    parser.addOption(localConfigOption);
     parser.addOption(keyfileOption);
     parser.addOption(pwstdinOption);
-    parser.addOption(parentWindowOption);
     parser.addOption(debugInfoOption);
+
+    Application app(argc, argv);
+    // don't set organizationName as that changes the return value of
+    // QStandardPaths::writableLocation(QDesktopServices::DataLocation)
+    Application::setApplicationName("KeePassXC");
+    Application::setApplicationVersion(KEEPASSXC_VERSION);
+    app.setProperty("KPXC_QUALIFIED_APPNAME", "org.keepassxc.KeePassXC");
 
     parser.process(app);
 
-    // Don't try and do anything with the application if we're only showing the help / version
+    // Exit early if we're only showing the help / version
     if (parser.isSet(versionOption) || parser.isSet(helpOption)) {
         return EXIT_SUCCESS;
     }
 
-    const QStringList fileNames = parser.positionalArguments();
+    // Process config file options early
+    if (parser.isSet(configOption) || parser.isSet(localConfigOption)) {
+        Config::createConfigFromFile(parser.value(configOption), parser.value(localConfigOption));
+    }
 
+    // Process single instance and early exit if already running
+    const QStringList fileNames = parser.positionalArguments();
     if (app.isAlreadyRunning()) {
         if (!fileNames.isEmpty()) {
             app.sendFileNamesToRunningInstance(fileNames);
@@ -109,7 +104,14 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
-    QApplication::setQuitOnLastWindowClosed(false);
+    // Apply the configured theme before creating any GUI elements
+    app.applyTheme();
+
+#if QT_VERSION >= QT_VERSION_CHECK(5, 7, 0)
+    QGuiApplication::setDesktopFileName(app.property("KPXC_QUALIFIED_APPNAME").toString() + QStringLiteral(".desktop"));
+#endif
+
+    Application::bootstrap();
 
     if (!Crypto::init()) {
         QString error = QObject::tr("Fatal error while testing the cryptographic functions.");
@@ -128,17 +130,7 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
-    if (parser.isSet(configOption)) {
-        Config::createConfigFromFile(parser.value(configOption));
-    }
-
     MainWindow mainWindow;
-    QObject::connect(&app, SIGNAL(anotherInstanceStarted()), &mainWindow, SLOT(bringToFront()));
-    QObject::connect(&app, SIGNAL(applicationActivated()), &mainWindow, SLOT(bringToFront()));
-    QObject::connect(&app, SIGNAL(openFile(QString)), &mainWindow, SLOT(openDatabase(QString)));
-    QObject::connect(&app, SIGNAL(quitSignalReceived()), &mainWindow, SLOT(appExit()), Qt::DirectConnection);
-
-    Bootstrap::restoreMainWindowState(mainWindow);
 
     const bool pwstdin = parser.isSet(pwstdinOption);
     for (const QString& filename : fileNames) {

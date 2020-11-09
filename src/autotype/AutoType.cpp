@@ -233,7 +233,7 @@ void AutoType::executeAutoTypeActions(const Entry* entry, QWidget* hideWindow, c
         macUtils()->raiseLastActiveWindow();
         m_plugin->hideOwnWindow();
 #else
-        hideWindow->showMinimized();
+        getMainWindow()->minimizeOrHide();
 #endif
     }
 
@@ -337,10 +337,14 @@ void AutoType::performGlobalAutoType(const QList<QSharedPointer<Database>>& dbLi
     }
 
     QList<AutoTypeMatch> matchList;
+    bool hideExpired = config()->get(Config::AutoTypeHideExpiredEntry).toBool();
 
     for (const auto& db : dbList) {
         const QList<Entry*> dbEntries = db->rootGroup()->entriesRecursive();
         for (Entry* entry : dbEntries) {
+            if (hideExpired && entry->isExpired()) {
+                continue;
+            }
             const QSet<QString> sequences = autoTypeSequences(entry, m_windowTitleForGlobal).toSet();
             for (const QString& sequence : sequences) {
                 if (!sequence.isEmpty()) {

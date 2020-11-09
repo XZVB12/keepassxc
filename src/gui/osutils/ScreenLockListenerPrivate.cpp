@@ -15,25 +15,28 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef SCREENLOCKLISTENERDBUS_H
-#define SCREENLOCKLISTENERDBUS_H
 #include "ScreenLockListenerPrivate.h"
-#include <QDBusMessage>
-#include <QObject>
-#include <QWidget>
+#if defined(Q_OS_MACOS)
+#include "macutils/ScreenLockListenerMac.h"
+#elif defined(Q_OS_UNIX)
+#include "nixutils/ScreenLockListenerDBus.h"
+#elif defined(Q_OS_WIN)
+#include "winutils/ScreenLockListenerWin.h"
+#endif
 
-class ScreenLockListenerDBus : public ScreenLockListenerPrivate
+ScreenLockListenerPrivate::ScreenLockListenerPrivate(QWidget* parent)
+    : QObject(parent)
 {
-    Q_OBJECT
-public:
-    explicit ScreenLockListenerDBus(QWidget* parent = nullptr);
+}
 
-private slots:
-    void gnomeSessionStatusChanged(uint status);
-    void logindPrepareForSleep(bool beforeSleep);
-    void unityLocked();
-    void freedesktopScreenSaver(bool status);
-    void login1SessionObjectReceived(QDBusMessage);
-};
-
-#endif // SCREENLOCKLISTENERDBUS_H
+ScreenLockListenerPrivate* ScreenLockListenerPrivate::instance(QWidget* parent)
+{
+#if defined(Q_OS_MACOS)
+    Q_UNUSED(parent);
+    return ScreenLockListenerMac::instance();
+#elif defined(Q_OS_UNIX)
+    return new ScreenLockListenerDBus(parent);
+#elif defined(Q_OS_WIN)
+    return new ScreenLockListenerWin(parent);
+#endif
+}

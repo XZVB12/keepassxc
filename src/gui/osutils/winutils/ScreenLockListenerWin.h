@@ -15,28 +15,24 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ScreenLockListenerPrivate.h"
-#if defined(Q_OS_MACOS)
-#include "ScreenLockListenerMac.h"
-#elif defined(Q_OS_UNIX)
-#include "ScreenLockListenerDBus.h"
-#elif defined(Q_OS_WIN)
-#include "ScreenLockListenerWin.h"
-#endif
+#ifndef SCREENLOCKLISTENERWIN_H
+#define SCREENLOCKLISTENERWIN_H
+#include <QAbstractNativeEventFilter>
+#include <QObject>
+#include <QWidget>
 
-ScreenLockListenerPrivate::ScreenLockListenerPrivate(QWidget* parent)
-    : QObject(parent)
-{
-}
+#include "gui/osutils/ScreenLockListenerPrivate.h"
 
-ScreenLockListenerPrivate* ScreenLockListenerPrivate::instance(QWidget* parent)
+class ScreenLockListenerWin : public ScreenLockListenerPrivate, public QAbstractNativeEventFilter
 {
-#if defined(Q_OS_MACOS)
-    Q_UNUSED(parent);
-    return ScreenLockListenerMac::instance();
-#elif defined(Q_OS_UNIX)
-    return new ScreenLockListenerDBus(parent);
-#elif defined(Q_OS_WIN)
-    return new ScreenLockListenerWin(parent);
-#endif
-}
+    Q_OBJECT
+public:
+    explicit ScreenLockListenerWin(QWidget* parent = nullptr);
+    ~ScreenLockListenerWin();
+    bool nativeEventFilter(const QByteArray& eventType, void* message, long*) override;
+
+private:
+    void* m_powerNotificationHandle;
+};
+
+#endif // SCREENLOCKLISTENERWIN_H

@@ -22,6 +22,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QHash>
+#include <QProcessEnvironment>
 #include <QSettings>
 #include <QSize>
 #include <QStandardPaths>
@@ -58,6 +59,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::AutoSaveAfterEveryChange,{QS("AutoSaveAfterEveryChange"), Roaming, true}},
     {Config::AutoReloadOnChange,{QS("AutoReloadOnChange"), Roaming, true}},
     {Config::AutoSaveOnExit,{QS("AutoSaveOnExit"), Roaming, true}},
+    {Config::AutoSaveNonDataChanges,{QS("AutoSaveNonDataChanges"), Roaming, true}},
     {Config::BackupBeforeSave,{QS("BackupBeforeSave"), Roaming, false}},
     {Config::UseAtomicSaves,{QS("UseAtomicSaves"), Roaming, true}},
     {Config::SearchLimitGroup,{QS("SearchLimitGroup"), Roaming, false}},
@@ -71,9 +73,9 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::AutoTypeEntryURLMatch,{QS("AutoTypeEntryURLMatch"), Roaming, true}},
     {Config::AutoTypeDelay,{QS("AutoTypeDelay"), Roaming, 25}},
     {Config::AutoTypeStartDelay,{QS("AutoTypeStartDelay"), Roaming, 500}},
+    {Config::AutoTypeHideExpiredEntry,{QS("AutoTypeHideExpiredEntry"), Roaming, false}},
     {Config::GlobalAutoTypeKey,{QS("GlobalAutoTypeKey"), Roaming, 0}},
     {Config::GlobalAutoTypeModifiers,{QS("GlobalAutoTypeModifiers"), Roaming, 0}},
-    {Config::TrackNonDataChanges,{QS("TrackNonDataChanges"), Roaming, false}},
     {Config::FaviconDownloadTimeout,{QS("FaviconDownloadTimeout"), Roaming, 10}},
     {Config::UpdateCheckMessageShown,{QS("UpdateCheckMessageShown"), Roaming, false}},
     {Config::UseTouchID,{QS("UseTouchID"), Roaming, false}},
@@ -90,6 +92,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::GUI_Language, {QS("GUI/Language"), Roaming, QS("system")}},
     {Config::GUI_HideToolbar, {QS("GUI/HideToolbar"), Roaming, false}},
     {Config::GUI_MovableToolbar, {QS("GUI/MovableToolbar"), Roaming, false}},
+    {Config::GUI_HideGroupsPanel, {QS("GUI/HideGroupsPanel"), Roaming, false}},
     {Config::GUI_HidePreviewPanel, {QS("GUI/HidePreviewPanel"), Roaming, false}},
     {Config::GUI_ToolButtonStyle, {QS("GUI/ToolButtonStyle"), Roaming, Qt::ToolButtonIconOnly}},
     {Config::GUI_ShowTrayIcon, {QS("GUI/ShowTrayIcon"), Roaming, false}},
@@ -98,6 +101,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::GUI_MinimizeOnStartup, {QS("GUI/MinimizeOnStartup"), Roaming, false}},
     {Config::GUI_MinimizeOnClose, {QS("GUI/MinimizeOnClose"), Roaming, false}},
     {Config::GUI_HideUsernames, {QS("GUI/HideUsernames"), Roaming, false}},
+    {Config::GUI_HidePasswords, {QS("GUI/HidePasswords"), Roaming, true}},
     {Config::GUI_AdvancedSettings, {QS("GUI/AdvancedSettings"), Roaming, false}},
     {Config::GUI_MonospaceNotes, {QS("GUI/MonospaceNotes"), Roaming, false}},
     {Config::GUI_ApplicationTheme, {QS("GUI/ApplicationTheme"), Roaming, QS("auto")}},
@@ -297,7 +301,6 @@ static const QHash<QString, Config::ConfigKey> deprecationMap = {
     {QS("security/IconDownloadFallbackToGoogle"), Config::Security_IconDownloadFallback},
 
     // 2.6.0
-    {QS("IgnoreGroupExpansion"), Config::TrackNonDataChanges},
     {QS("security/autotypeask"), Config::Security_AutoTypeAsk},
     {QS("security/clearclipboard"), Config::Security_ClearClipboard},
     {QS("security/clearclipboardtimeout"), Config::Security_ClearClipboardTimeout},
@@ -419,49 +422,17 @@ void Config::migrate()
     sync();
 }
 
-Config::Config(const QString& fileName, QObject* parent)
+Config::Config(const QString& configFileName, const QString& localConfigFileName, QObject* parent)
     : QObject(parent)
 {
-    init(fileName);
+    init(configFileName, localConfigFileName);
 }
 
 Config::Config(QObject* parent)
     : QObject(parent)
 {
-    // Check if we are running in portable mode, if so store the config files local to the app
-    auto portablePath = QCoreApplication::applicationDirPath().append("/%1");
-    if (QFile::exists(portablePath.arg(".portable"))) {
-        init(portablePath.arg("config/keepassxc.ini"), portablePath.arg("config/keepassxc_local.ini"));
-        return;
-    }
-
-    QString configPath;
-    QString localConfigPath;
-
-#if defined(Q_OS_WIN)
-    configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    localConfigPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-#elif defined(Q_OS_MACOS)
-    configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    localConfigPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
-#else
-    // On case-sensitive Operating Systems, force use of lowercase app directories
-    configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/keepassxc";
-    localConfigPath = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/keepassxc";
-#endif
-
-    configPath += "/keepassxc";
-    localConfigPath += "/keepassxc";
-
-#ifdef QT_DEBUG
-    configPath += "_debug";
-    localConfigPath += "_debug";
-#endif
-
-    configPath += ".ini";
-    localConfigPath += ".ini";
-
-    init(QDir::toNativeSeparators(configPath), QDir::toNativeSeparators(localConfigPath));
+    auto configFiles = defaultConfigFiles();
+    init(configFiles.first, configFiles.second);
 }
 
 Config::~Config()
@@ -489,6 +460,45 @@ void Config::init(const QString& configFileName, const QString& localConfigFileN
     connect(qApp, &QCoreApplication::aboutToQuit, this, &Config::sync);
 }
 
+QPair<QString, QString> Config::defaultConfigFiles()
+{
+    // Check if we are running in portable mode, if so store the config files local to the app
+    auto portablePath = QCoreApplication::applicationDirPath().append("/%1");
+    if (QFile::exists(portablePath.arg(".portable"))) {
+        return {portablePath.arg("config/keepassxc.ini"), portablePath.arg("config/keepassxc_local.ini")};
+    }
+
+    QString configPath;
+    QString localConfigPath;
+
+#if defined(Q_OS_WIN)
+    configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    localConfigPath = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+#elif defined(Q_OS_MACOS)
+    configPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    localConfigPath = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+#else
+    // On case-sensitive Operating Systems, force use of lowercase app directories
+    configPath = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + "/keepassxc";
+    localConfigPath = QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + "/keepassxc";
+#endif
+
+    QString suffix;
+#ifdef QT_DEBUG
+    suffix = "_debug";
+#endif
+
+    configPath += QString("/keepassxc%1.ini").arg(suffix);
+    localConfigPath += QString("/keepassxc%1.ini").arg(suffix);
+
+    // Allow overriding the default location with env vars
+    const auto& env = QProcessEnvironment::systemEnvironment();
+    configPath = env.value("KPXC_CONFIG", configPath);
+    localConfigPath = env.value("KPXC_CONFIG_LOCAL", localConfigPath);
+
+    return {QDir::toNativeSeparators(configPath), QDir::toNativeSeparators(localConfigPath)};
+}
+
 Config* Config::instance()
 {
     if (!m_instance) {
@@ -498,12 +508,16 @@ Config* Config::instance()
     return m_instance;
 }
 
-void Config::createConfigFromFile(const QString& file)
+void Config::createConfigFromFile(const QString& configFileName, const QString& localConfigFileName)
 {
     if (m_instance) {
         delete m_instance;
     }
-    m_instance = new Config(file, qApp);
+
+    auto defaultFiles = defaultConfigFiles();
+    m_instance = new Config(configFileName.isEmpty() ? defaultFiles.first : configFileName,
+                            localConfigFileName.isEmpty() ? defaultFiles.second : localConfigFileName,
+                            qApp);
 }
 
 void Config::createTempFileInstance()
@@ -515,7 +529,7 @@ void Config::createTempFileInstance()
     bool openResult = tmpFile->open();
     Q_ASSERT(openResult);
     Q_UNUSED(openResult);
-    m_instance = new Config(tmpFile->fileName(), qApp);
+    m_instance = new Config(tmpFile->fileName(), "", qApp);
     tmpFile->setParent(m_instance);
 }
 

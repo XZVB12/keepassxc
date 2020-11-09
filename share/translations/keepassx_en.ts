@@ -137,6 +137,10 @@
         <source>Colorful</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>You must restart the application to set the new language. Would you like to restart now?</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>ApplicationSettingsWidgetGeneral</name>
@@ -167,10 +171,6 @@
     <message>
         <source>Automatically save after every change</source>
         <translation>Automatically save after every change</translation>
-    </message>
-    <message>
-        <source>Automatically save on exit</source>
-        <translation>Automatically save on exit</translation>
     </message>
     <message>
         <source>Automatically reload the database when modified externally</source>
@@ -307,10 +307,6 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Mark database as modified for non-data changes (e.g., expanding groups)</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Safely save database files (disable if experiencing problems with Dropbox, etc.)</source>
         <translation type="unfinished"></translation>
     </message>
@@ -344,6 +340,18 @@
     </message>
     <message>
         <source>Auto-Type start delay:</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Automatically save when locking database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Automatically save non-data changes when locking database</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Tray icon type</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -1282,14 +1290,6 @@ Please consider generating a new key file.</translation>
     </message>
     <message>
         <source>TouchID for Quick Unlock</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation type="unfinished">Clear</translation>
-    </message>
-    <message>
-        <source>Clear Key File</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
@@ -2643,6 +2643,10 @@ Disable safe saves and try again?</translation>
         <source>Expires:</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Edit Entry</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>EditEntryWidgetSSHAgent</name>
@@ -2940,6 +2944,10 @@ Supported extensions are: %1.</source>
     </message>
     <message>
         <source>Set default Auto-Type sequence</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Edit Group</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -3491,18 +3499,6 @@ Are you sure to add this file?</source>
 </context>
 <context>
     <name>EntryView</name>
-    <message>
-        <source>Customize View</source>
-        <translation>Customize View</translation>
-    </message>
-    <message>
-        <source>Hide Usernames</source>
-        <translation>Hide Usernames</translation>
-    </message>
-    <message>
-        <source>Hide Passwords</source>
-        <translation>Hide Passwords</translation>
-    </message>
     <message>
         <source>Fit to window</source>
         <translation>Fit to window</translation>
@@ -4872,6 +4868,10 @@ Expect some bugs and minor issues, this version is not meant for production use.
         <translation type="unfinished"></translation>
     </message>
     <message>
+        <source>Show Groups Panel</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
         <source>Show Preview Panel</source>
         <translation type="unfinished"></translation>
     </message>
@@ -4886,6 +4886,38 @@ Expect some bugs and minor issues, this version is not meant for production use.
     <message>
         <source>You must restart the application to apply this setting. Would you like to restart now?</source>
         <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Perform Auto-Type Sequence</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>{USERNAME}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>{USERNAME}{ENTER}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>{PASSWORD}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>{PASSWORD}{ENTER}</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Always on Top</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Hide Usernames</source>
+        <translation type="unfinished">Hide Usernames</translation>
+    </message>
+    <message>
+        <source>Hide Passwords</source>
+        <translation type="unfinished">Hide Passwords</translation>
     </message>
 </context>
 <context>
@@ -5371,10 +5403,6 @@ Expect some bugs and minor issues, this version is not meant for production use.
         <translation>Excellent</translation>
     </message>
     <message>
-        <source>ExtendedASCII</source>
-        <translation>ExtendedASCII</translation>
-    </message>
-    <message>
         <source>Switch to advanced mode</source>
         <translation>Switch to advanced mode</translation>
     </message>
@@ -5383,56 +5411,20 @@ Expect some bugs and minor issues, this version is not meant for production use.
         <translation>Advanced</translation>
     </message>
     <message>
-        <source>A-Z</source>
-        <translation>A-Z</translation>
-    </message>
-    <message>
-        <source>a-z</source>
-        <translation>a-z</translation>
-    </message>
-    <message>
-        <source>0-9</source>
-        <translation>0-9</translation>
-    </message>
-    <message>
         <source>Braces</source>
         <translation>Braces</translation>
-    </message>
-    <message>
-        <source>{[(</source>
-        <translation>{[(</translation>
     </message>
     <message>
         <source>Punctuation</source>
         <translation>Punctuation</translation>
     </message>
     <message>
-        <source>.,:;</source>
-        <translation>.,:;</translation>
-    </message>
-    <message>
         <source>Quotes</source>
         <translation>Quotes</translation>
     </message>
     <message>
-        <source>&quot; &apos;</source>
-        <translation>&quot; &apos;</translation>
-    </message>
-    <message>
-        <source>&lt;*+!?=</source>
-        <translation>&lt;*+!?=</translation>
-    </message>
-    <message>
-        <source>\_|-/</source>
-        <translation>\_|-/</translation>
-    </message>
-    <message>
         <source>Logograms</source>
         <translation>Logograms</translation>
-    </message>
-    <message>
-        <source>#$%&amp;&amp;@^`~</source>
-        <translation>#$%&amp;&amp;@^`~</translation>
     </message>
     <message>
         <source>Character set to exclude from generated password</source>
@@ -5547,11 +5539,11 @@ Expect some bugs and minor issues, this version is not meant for production use.
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Clear</source>
-        <translation type="unfinished">Clear</translation>
+        <source>Regenerate password (%1)</source>
+        <translation type="unfinished"></translation>
     </message>
     <message>
-        <source>Regenerate password (%1)</source>
+        <source>Special Characters</source>
         <translation type="unfinished"></translation>
     </message>
 </context>
@@ -6287,10 +6279,6 @@ Available commands:
         <translation>read password of the database from stdin</translation>
     </message>
     <message>
-        <source>Parent window handle</source>
-        <translation>Parent window handle</translation>
-    </message>
-    <message>
         <source>Another instance of KeePassXC is already running.</source>
         <translation>Another instance of KeePassXC is already running.</translation>
     </message>
@@ -6812,6 +6800,10 @@ Kernel: %3 %4</source>
             <numerusform>%1 s</numerusform>
         </translation>
     </message>
+    <message>
+        <source>path to a custom local config file</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>QtIOCompressor</name>
@@ -7234,10 +7226,6 @@ Kernel: %3 %4</source>
     <message>
         <source>Search</source>
         <translation>Search</translation>
-    </message>
-    <message>
-        <source>Clear</source>
-        <translation>Clear</translation>
     </message>
     <message>
         <source>Limit search to selected group</source>

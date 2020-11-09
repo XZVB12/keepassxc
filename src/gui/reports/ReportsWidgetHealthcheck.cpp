@@ -23,7 +23,7 @@
 #include "core/Global.h"
 #include "core/Group.h"
 #include "core/PasswordHealth.h"
-#include "core/Resources.h"
+#include "gui/Icons.h"
 #include "gui/styles/StateColorPalette.h"
 
 #include <QMenu>
@@ -76,6 +76,27 @@ namespace
         QList<QSharedPointer<Item>> m_items;
         bool m_anyKnownBad = false;
     };
+
+    class ReportSortProxyModel : public QSortFilterProxyModel
+    {
+    public:
+        ReportSortProxyModel(QObject* parent)
+            : QSortFilterProxyModel(parent){};
+        ~ReportSortProxyModel() override = default;
+
+    protected:
+        bool lessThan(const QModelIndex& left, const QModelIndex& right) const override
+        {
+            // Check if the display data is a number, convert and compare if so
+            bool ok = false;
+            int leftInt = sourceModel()->data(left).toString().toInt(&ok);
+            if (ok) {
+                return leftInt < sourceModel()->data(right).toString().toInt();
+            }
+            // Otherwise use default sorting
+            return QSortFilterProxyModel::lessThan(left, right);
+        }
+    };
 } // namespace
 
 Health::Health(QSharedPointer<Database> db)
@@ -119,13 +140,14 @@ Health::Health(QSharedPointer<Database> db)
 ReportsWidgetHealthcheck::ReportsWidgetHealthcheck(QWidget* parent)
     : QWidget(parent)
     , m_ui(new Ui::ReportsWidgetHealthcheck())
-    , m_errorIcon(Resources::instance()->icon("dialog-error"))
+    , m_errorIcon(icons()->icon("dialog-error"))
     , m_referencesModel(new QStandardItemModel(this))
-    , m_modelProxy(new QSortFilterProxyModel(this))
+    , m_modelProxy(new ReportSortProxyModel(this))
 {
     m_ui->setupUi(this);
 
     m_modelProxy->setSourceModel(m_referencesModel.data());
+    m_modelProxy->setSortLocaleAware(true);
     m_ui->healthcheckTableView->setModel(m_modelProxy.data());
     m_ui->healthcheckTableView->setSelectionMode(QAbstractItemView::NoSelection);
     m_ui->healthcheckTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -256,6 +278,7 @@ void ReportsWidgetHealthcheck::calculateHealth()
     } else {
         m_referencesModel->setHorizontalHeaderLabels(QStringList() << tr("") << tr("Title") << tr("Path") << tr("Score")
                                                                    << tr("Reason"));
+        m_ui->healthcheckTableView->sortByColumn(0, Qt::AscendingOrder);
     }
 
     m_ui->healthcheckTableView->resizeRowsToContents();
@@ -302,12 +325,12 @@ void ReportsWidgetHealthcheck::customMenuRequested(QPoint pos)
     const auto menu = new QMenu(this);
 
     // Create the "edit entry" menu item
-    const auto edit = new QAction(Resources::instance()->icon("entry-edit"), tr("Edit Entry..."), this);
+    const auto edit = new QAction(icons()->icon("entry-edit"), tr("Edit Entry..."), this);
     menu->addAction(edit);
     connect(edit, SIGNAL(triggered()), SLOT(editFromContextmenu()));
 
     // Create the "exclude from reports" menu item
-    const auto knownbad = new QAction(Resources::instance()->icon("reports-exclude"), tr("Exclude from reports"), this);
+    const auto knownbad = new QAction(icons()->icon("reports-exclude"), tr("Exclude from reports"), this);
     knownbad->setCheckable(true);
     knownbad->setChecked(m_contextmenuEntry->customData()->contains(PasswordHealth::OPTION_KNOWN_BAD)
                          && m_contextmenuEntry->customData()->value(PasswordHealth::OPTION_KNOWN_BAD) == TRUE_STR);

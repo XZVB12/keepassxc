@@ -35,8 +35,10 @@
 #include "core/Config.h"
 #include "core/Database.h"
 #include "core/Global.h"
-#include "core/Resources.h"
+#include "gui/Icons.h"
 #include "touchid/TouchID.h"
+
+#include <QScrollArea>
 
 class DatabaseSettingsDialog::ExtraPage
 {
@@ -76,12 +78,21 @@ DatabaseSettingsDialog::DatabaseSettingsDialog(QWidget* parent)
     connect(m_ui->buttonBox, SIGNAL(accepted()), SLOT(save()));
     connect(m_ui->buttonBox, SIGNAL(rejected()), SLOT(reject()));
 
-    m_ui->categoryList->addCategory(tr("General"), Resources::instance()->icon("preferences-other"));
-    m_ui->categoryList->addCategory(tr("Security"), Resources::instance()->icon("security-high"));
+    m_ui->categoryList->addCategory(tr("General"), icons()->icon("preferences-other"));
+    m_ui->categoryList->addCategory(tr("Security"), icons()->icon("security-high"));
     m_ui->stackedWidget->addWidget(m_generalWidget);
 
     m_ui->stackedWidget->addWidget(m_securityTabWidget);
-    m_securityTabWidget->addTab(m_databaseKeyWidget, tr("Database Credentials"));
+
+    auto* scrollArea = new QScrollArea(parent);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setFrameShadow(QFrame::Plain);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setSizeAdjustPolicy(QScrollArea::AdjustToContents);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setWidget(m_databaseKeyWidget);
+    m_securityTabWidget->addTab(scrollArea, tr("Database Credentials"));
+
     m_securityTabWidget->addTab(m_encryptionWidget, tr("Encryption Settings"));
 
 #if defined(WITH_XC_KEESHARE)
@@ -100,7 +111,7 @@ DatabaseSettingsDialog::DatabaseSettingsDialog(QWidget* parent)
     connect(m_ui->advancedSettingsToggle, SIGNAL(toggled(bool)), SLOT(toggleAdvancedMode(bool)));
 
 #ifdef WITH_XC_BROWSER
-    m_ui->categoryList->addCategory(tr("Browser Integration"), Resources::instance()->icon("internet-web-browser"));
+    m_ui->categoryList->addCategory(tr("Browser Integration"), icons()->icon("internet-web-browser"));
     m_ui->stackedWidget->addWidget(m_browserWidget);
 #endif
 

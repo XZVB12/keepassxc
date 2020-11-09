@@ -25,8 +25,8 @@
 #include "autotype/AutoType.h"
 #include "core/Config.h"
 #include "core/Global.h"
-#include "core/Resources.h"
 #include "core/Translator.h"
+#include "gui/Icons.h"
 #include "gui/MainWindow.h"
 #include "gui/osutils/OSUtils.h"
 
@@ -93,8 +93,8 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
 
     m_secUi->setupUi(m_secWidget);
     m_generalUi->setupUi(m_generalWidget);
-    addPage(tr("General"), Resources::instance()->icon("preferences-other"), m_generalWidget);
-    addPage(tr("Security"), Resources::instance()->icon("security-high"), m_secWidget);
+    addPage(tr("General"), icons()->icon("preferences-other"), m_generalWidget);
+    addPage(tr("Security"), icons()->icon("security-high"), m_secWidget);
 
     if (!autoType()->isAvailable()) {
         m_generalUi->generalSettingsTabWidget->removeTab(1);
@@ -126,6 +126,7 @@ ApplicationSettingsWidget::ApplicationSettingsWidget(QWidget* parent)
     m_generalUi->faviconTimeoutSpinBox->installEventFilter(mouseWheelFilter);
     m_generalUi->toolButtonStyleComboBox->installEventFilter(mouseWheelFilter);
     m_generalUi->languageComboBox->installEventFilter(mouseWheelFilter);
+    m_generalUi->trayIconAppearance->installEventFilter(mouseWheelFilter);
 
 #ifdef WITH_XC_UPDATECHECK
     connect(m_generalUi->checkForUpdatesOnStartupCheckBox, SIGNAL(toggled(bool)), SLOT(checkUpdatesToggled(bool)));
@@ -183,6 +184,7 @@ void ApplicationSettingsWidget::loadSettings()
         config()->get(Config::OpenPreviousDatabasesOnStartup).toBool());
     m_generalUi->autoSaveAfterEveryChangeCheckBox->setChecked(config()->get(Config::AutoSaveAfterEveryChange).toBool());
     m_generalUi->autoSaveOnExitCheckBox->setChecked(config()->get(Config::AutoSaveOnExit).toBool());
+    m_generalUi->autoSaveNonDataChangesCheckBox->setChecked(config()->get(Config::AutoSaveNonDataChanges).toBool());
     m_generalUi->backupBeforeSaveCheckBox->setChecked(config()->get(Config::BackupBeforeSave).toBool());
     m_generalUi->useAtomicSavesCheckBox->setChecked(config()->get(Config::UseAtomicSaves).toBool());
     m_generalUi->autoReloadOnChangeCheckBox->setChecked(config()->get(Config::AutoReloadOnChange).toBool());
@@ -196,7 +198,7 @@ void ApplicationSettingsWidget::loadSettings()
         config()->get(Config::UseGroupIconOnEntryCreation).toBool());
     m_generalUi->autoTypeEntryTitleMatchCheckBox->setChecked(config()->get(Config::AutoTypeEntryTitleMatch).toBool());
     m_generalUi->autoTypeEntryURLMatchCheckBox->setChecked(config()->get(Config::AutoTypeEntryURLMatch).toBool());
-    m_generalUi->trackNonDataChangesCheckBox->setChecked(config()->get(Config::TrackNonDataChanges).toBool());
+    m_generalUi->autoTypeHideExpiredEntryCheckBox->setChecked(config()->get(Config::AutoTypeHideExpiredEntry).toBool());
     m_generalUi->faviconTimeoutSpinBox->setValue(config()->get(Config::FaviconDownloadTimeout).toInt());
 
     m_generalUi->languageComboBox->clear();
@@ -252,7 +254,7 @@ void ApplicationSettingsWidget::loadSettings()
     m_generalUi->trayIconAppearance->addItem(tr("Monochrome (light)"), "monochrome-light");
     m_generalUi->trayIconAppearance->addItem(tr("Monochrome (dark)"), "monochrome-dark");
     m_generalUi->trayIconAppearance->addItem(tr("Colorful"), "colorful");
-    int trayIconIndex = m_generalUi->trayIconAppearance->findData(resources()->trayIconAppearance());
+    int trayIconIndex = m_generalUi->trayIconAppearance->findData(icons()->trayIconAppearance());
     if (trayIconIndex > 0) {
         m_generalUi->trayIconAppearance->setCurrentIndex(trayIconIndex);
     }
@@ -311,6 +313,7 @@ void ApplicationSettingsWidget::saveSettings()
                   m_generalUi->openPreviousDatabasesOnStartupCheckBox->isChecked());
     config()->set(Config::AutoSaveAfterEveryChange, m_generalUi->autoSaveAfterEveryChangeCheckBox->isChecked());
     config()->set(Config::AutoSaveOnExit, m_generalUi->autoSaveOnExitCheckBox->isChecked());
+    config()->set(Config::AutoSaveNonDataChanges, m_generalUi->autoSaveNonDataChangesCheckBox->isChecked());
     config()->set(Config::BackupBeforeSave, m_generalUi->backupBeforeSaveCheckBox->isChecked());
     config()->set(Config::UseAtomicSaves, m_generalUi->useAtomicSavesCheckBox->isChecked());
     config()->set(Config::AutoReloadOnChange, m_generalUi->autoReloadOnChangeCheckBox->isChecked());
@@ -320,9 +323,9 @@ void ApplicationSettingsWidget::saveSettings()
     config()->set(Config::MinimizeOnCopy, m_generalUi->minimizeOnCopyRadioButton->isChecked());
     config()->set(Config::DropToBackgroundOnCopy, m_generalUi->dropToBackgroundOnCopyRadioButton->isChecked());
     config()->set(Config::UseGroupIconOnEntryCreation, m_generalUi->useGroupIconOnEntryCreationCheckBox->isChecked());
-    config()->set(Config::TrackNonDataChanges, m_generalUi->trackNonDataChangesCheckBox->isChecked());
     config()->set(Config::AutoTypeEntryTitleMatch, m_generalUi->autoTypeEntryTitleMatchCheckBox->isChecked());
     config()->set(Config::AutoTypeEntryURLMatch, m_generalUi->autoTypeEntryURLMatchCheckBox->isChecked());
+    config()->set(Config::AutoTypeHideExpiredEntry, m_generalUi->autoTypeHideExpiredEntryCheckBox->isChecked());
     config()->set(Config::FaviconDownloadTimeout, m_generalUi->faviconTimeoutSpinBox->value());
 
     auto language = m_generalUi->languageComboBox->currentData().toString();
@@ -384,7 +387,6 @@ void ApplicationSettingsWidget::saveSettings()
     // Security: clear storage if related settings are disabled
     if (!config()->get(Config::RememberLastDatabases).toBool()) {
         config()->remove(Config::LastDatabases);
-        config()->remove(Config::OpenPreviousDatabasesOnStartup);
         config()->remove(Config::LastActiveDatabase);
         config()->remove(Config::LastAttachmentDir);
     }
@@ -424,7 +426,6 @@ void ApplicationSettingsWidget::resetSettings()
 
     // Clear recently used data
     config()->remove(Config::LastDatabases);
-    config()->remove(Config::OpenPreviousDatabasesOnStartup);
     config()->remove(Config::LastActiveDatabase);
     config()->remove(Config::LastAttachmentDir);
     config()->remove(Config::LastKeyFiles);
@@ -452,11 +453,13 @@ void ApplicationSettingsWidget::reject()
 
 void ApplicationSettingsWidget::autoSaveToggled(bool checked)
 {
-    // Explicitly enable auto-save on exit if it wasn't already
-    if (checked && !m_generalUi->autoSaveOnExitCheckBox->isChecked()) {
+    // Explicitly enable other auto-save options
+    if (checked) {
         m_generalUi->autoSaveOnExitCheckBox->setChecked(true);
+        m_generalUi->autoSaveNonDataChangesCheckBox->setChecked(true);
     }
     m_generalUi->autoSaveOnExitCheckBox->setEnabled(!checked);
+    m_generalUi->autoSaveNonDataChangesCheckBox->setEnabled(!checked);
 }
 
 void ApplicationSettingsWidget::hideWindowOnCopyCheckBoxToggled(bool checked)

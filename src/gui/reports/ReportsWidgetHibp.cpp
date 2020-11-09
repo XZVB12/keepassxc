@@ -23,7 +23,7 @@
 #include "core/Global.h"
 #include "core/Group.h"
 #include "core/PasswordHealth.h"
-#include "core/Resources.h"
+#include "gui/Icons.h"
 #include "gui/MessageBox.h"
 
 #include <QMenu>
@@ -45,17 +45,38 @@ namespace
         return entry->customData()->contains(PasswordHealth::OPTION_KNOWN_BAD)
                && entry->customData()->value(PasswordHealth::OPTION_KNOWN_BAD) == TRUE_STR;
     }
+
+    class ReportSortProxyModel : public QSortFilterProxyModel
+    {
+    public:
+        ReportSortProxyModel(QObject* parent)
+            : QSortFilterProxyModel(parent){};
+        ~ReportSortProxyModel() override = default;
+
+    protected:
+        bool lessThan(const QModelIndex& left, const QModelIndex& right) const override
+        {
+            // Sort count column by user data
+            if (left.column() == 2) {
+                return sourceModel()->data(left, Qt::UserRole).toInt()
+                       < sourceModel()->data(right, Qt::UserRole).toInt();
+            }
+            // Otherwise use default sorting
+            return QSortFilterProxyModel::lessThan(left, right);
+        }
+    };
 } // namespace
 
 ReportsWidgetHibp::ReportsWidgetHibp(QWidget* parent)
     : QWidget(parent)
     , m_ui(new Ui::ReportsWidgetHibp())
     , m_referencesModel(new QStandardItemModel(this))
-    , m_modelProxy(new QSortFilterProxyModel(this))
+    , m_modelProxy(new ReportSortProxyModel(this))
 {
     m_ui->setupUi(this);
 
     m_modelProxy->setSourceModel(m_referencesModel.data());
+    m_modelProxy->setSortLocaleAware(true);
     m_ui->hibpTableView->setModel(m_modelProxy.data());
     m_ui->hibpTableView->setSelectionMode(QAbstractItemView::NoSelection);
     m_ui->hibpTableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
@@ -167,6 +188,7 @@ void ReportsWidgetHibp::makeHibpTable()
         }
 
         row[2]->setForeground(red);
+        row[2]->setData(count, Qt::UserRole);
         m_referencesModel->appendRow(row);
 
         // Store entry pointer per table row (used in double click handler)
@@ -198,6 +220,7 @@ void ReportsWidgetHibp::makeHibpTable()
     }
 
     m_ui->hibpTableView->resizeRowsToContents();
+    m_ui->hibpTableView->sortByColumn(2, Qt::DescendingOrder);
 
     m_ui->stackedWidget->setCurrentIndex(1);
 }
@@ -364,12 +387,12 @@ void ReportsWidgetHibp::customMenuRequested(QPoint pos)
     const auto menu = new QMenu(this);
 
     // Create the "edit entry" menu item
-    const auto edit = new QAction(Resources::instance()->icon("entry-edit"), tr("Edit Entry..."), this);
+    const auto edit = new QAction(icons()->icon("entry-edit"), tr("Edit Entry..."), this);
     menu->addAction(edit);
     connect(edit, SIGNAL(triggered()), SLOT(editFromContextmenu()));
 
     // Create the "exclude from reports" menu item
-    const auto knownbad = new QAction(Resources::instance()->icon("reports-exclude"), tr("Exclude from reports"), this);
+    const auto knownbad = new QAction(icons()->icon("reports-exclude"), tr("Exclude from reports"), this);
     knownbad->setCheckable(true);
     knownbad->setChecked(m_contextmenuEntry->customData()->contains(PasswordHealth::OPTION_KNOWN_BAD)
                          && m_contextmenuEntry->customData()->value(PasswordHealth::OPTION_KNOWN_BAD) == TRUE_STR);

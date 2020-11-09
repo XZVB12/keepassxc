@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 2010 Felix Geyer <debfx@fobos.de>
- *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
+ *  Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,10 +23,10 @@
 #include <QMainWindow>
 #include <QSystemTrayIcon>
 
-#include "core/ScreenLockListener.h"
 #include "core/SignalMultiplexer.h"
 #include "gui/Application.h"
 #include "gui/DatabaseWidget.h"
+#include "gui/osutils/ScreenLockListener.h"
 
 namespace Ui
 {
@@ -49,6 +49,7 @@ public:
     ~MainWindow();
 
     QList<DatabaseWidget*> getOpenDatabases();
+    void restoreConfigState();
 
     enum StackedWidgetIndex
     {
@@ -86,6 +87,7 @@ public slots:
 protected:
     void closeEvent(QCloseEvent* event) override;
     void changeEvent(QEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     bool focusNextPrevChild(bool next) override;
 
 private slots:
@@ -130,8 +132,6 @@ private slots:
     void selectNextDatabaseTab();
     void selectPreviousDatabaseTab();
     void selectDatabaseTab(int tabIndex, bool wrap = false);
-    void togglePasswordsHidden();
-    void toggleUsernamesHidden();
     void obtainContextFocusLock();
     void releaseContextFocusLock();
     void agentEnabled(bool enabled);

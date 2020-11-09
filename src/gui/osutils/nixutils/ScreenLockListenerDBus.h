@@ -1,7 +1,5 @@
 /*
- *  Copyright (C) 2007 Trolltech ASA <info@trolltech.com>
- *  Copyright (C) 2012 Felix Geyer <debfx@fobos.de>
- *  Copyright (C) 2012 Florian Geyer <blueice@fobos.de>
+ *  Copyright (C) 2017 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,28 +15,25 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef KEEPASSX_LINEEDIT_H
-#define KEEPASSX_LINEEDIT_H
+#ifndef SCREENLOCKLISTENERDBUS_H
+#define SCREENLOCKLISTENERDBUS_H
+#include "gui/osutils/ScreenLockListenerPrivate.h"
+#include <QDBusMessage>
+#include <QObject>
+#include <QWidget>
 
-#include <QLineEdit>
-
-class QToolButton;
-
-class LineEdit : public QLineEdit
+class ScreenLockListenerDBus : public ScreenLockListenerPrivate
 {
     Q_OBJECT
-
 public:
-    explicit LineEdit(QWidget* parent = nullptr);
-
-protected:
-    void resizeEvent(QResizeEvent* event) override;
+    explicit ScreenLockListenerDBus(QWidget* parent = nullptr);
 
 private slots:
-    void updateCloseButton(const QString& text);
-
-private:
-    QToolButton* const m_clearButton;
+    void gnomeSessionStatusChanged(uint status);
+    void logindPrepareForSleep(bool beforeSleep);
+    void unityLocked();
+    void freedesktopScreenSaver(bool status);
+    void login1SessionObjectReceived(QDBusMessage);
 };
 
-#endif // KEEPASSX_LINEEDIT_H
+#endif // SCREENLOCKLISTENERDBUS_H

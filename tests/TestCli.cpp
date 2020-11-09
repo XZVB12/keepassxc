@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2019 KeePassXC Team <team@keepassxc.org>
+ *  Copyright (C) 2020 KeePassXC Team <team@keepassxc.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,10 @@
 #include "config-keepassx-tests.h"
 #include "core/Bootstrap.h"
 #include "core/Config.h"
+#include "core/Entry.h"
 #include "core/Global.h"
+#include "core/Group.h"
+#include "core/Metadata.h"
 #include "core/Tools.h"
 #include "crypto/Crypto.h"
 #include "keys/drivers/YubiKey.h"
@@ -65,7 +68,7 @@ void TestCli::initTestCase()
     QVERIFY(Crypto::init());
 
     Config::createTempFileInstance();
-    Bootstrap::bootstrapApplication();
+    Bootstrap::bootstrap();
 
     auto fd = new QFile();
 #ifdef Q_OS_WIN
@@ -85,6 +88,9 @@ void TestCli::init()
 
     m_dbFile2.reset(new TemporaryFile());
     m_dbFile2->copyFromFile(file.arg("NewDatabase2.kdbx"));
+
+    m_dbFileMulti.reset(new TemporaryFile());
+    m_dbFileMulti->copyFromFile(file.arg("NewDatabaseMulti.kdbx"));
 
     m_xmlFile.reset(new TemporaryFile());
     m_xmlFile->copyFromFile(file.arg("NewDatabase.xml"));
@@ -115,6 +121,7 @@ void TestCli::cleanup()
 {
     m_dbFile.reset();
     m_dbFile2.reset();
+    m_dbFileMulti.reset();
     m_keyFileProtectedDbFile.reset();
     m_keyFileProtectedNoPasswordDbFile.reset();
     m_yubiKeyProtectedDbFile.reset();
@@ -278,6 +285,8 @@ void TestCli::testAdd()
              "-g",
              "-L",
              "20",
+             "-n",
+             "some notes",
              m_dbFile->fileName(),
              "/newuser-entry"});
     m_stderr->readLine(); // Skip password prompt
@@ -290,6 +299,7 @@ void TestCli::testAdd()
     QCOMPARE(entry->username(), QString("newuser"));
     QCOMPARE(entry->url(), QString("https://example.com/"));
     QCOMPARE(entry->password().size(), 20);
+    QCOMPARE(entry->notes(), QString("some notes"));
 
     // Quiet option
     setInput("a");
@@ -349,6 +359,18 @@ void TestCli::testAdd()
     QCOMPARE(entry->username(), QString("newuser4"));
     QCOMPARE(entry->password().size(), 20);
     QVERIFY(!defaultPasswordClassesRegex.match(entry->password()).hasMatch());
+
+    setInput("a");
+    execCmd(addCmd, {"add", "-u", "newuser5", "-n", "test\\nnew line", m_dbFile->fileName(), "/newuser-entry5"});
+    m_stderr->readLine(); // skip password prompt
+    QCOMPARE(m_stderr->readAll(), QByteArray(""));
+    QCOMPARE(m_stdout->readAll(), QByteArray("Successfully added entry newuser-entry5.\n"));
+
+    db = readDatabase();
+    entry = db->rootGroup()->findEntryByPath("/newuser-entry5");
+    QVERIFY(entry);
+    QCOMPARE(entry->username(), QString("newuser5"));
+    QCOMPARE(entry->notes(), QString("test\nnew line"));
 }
 
 void TestCli::testAddGroup()
@@ -504,6 +526,17 @@ void TestCli::testClip()
     setInput("a");
     execCmd(clipCmd, {"clip", m_dbFile2->fileName(), "--attribute", "Username", "--totp", "/Sample Entry"});
     QVERIFY(m_stderr->readAll().contains("ERROR: Please specify one of --attribute or --totp, not both.\n"));
+
+    // Best option
+    setInput("a");
+    execCmd(clipCmd, {"clip", m_dbFileMulti->fileName(), "Multi", "-b"});
+    QByteArray errorChoices = m_stderr->readAll();
+    QVERIFY(errorChoices.contains("Multi Entry 1"));
+    QVERIFY(errorChoices.contains("Multi Entry 2"));
+
+    setInput("a");
+    execCmd(clipCmd, {"clip", m_dbFileMulti->fileName(), "Entry 2", "-b"});
+    QTRY_COMPARE(clipboard->text(), QString("Password2"));
 }
 
 void TestCli::testCreate()
@@ -719,6 +752,8 @@ void TestCli::testEdit()
              "newuser",
              "--url",
              "https://otherurl.example.com/",
+             "-n",
+             "newnotes",
              "-t",
              "newtitle",
              m_dbFile->fileName(),
@@ -731,6 +766,7 @@ void TestCli::testEdit()
     QCOMPARE(entry->username(), QString("newuser"));
     QCOMPARE(entry->url(), QString("https://otherurl.example.com/"));
     QCOMPARE(entry->password(), QString("Password"));
+    QCOMPARE(entry->notes(), QString("newnotes"));
 
     // Quiet option
     setInput("a");
@@ -788,6 +824,14 @@ void TestCli::testEdit()
     entry = db->rootGroup()->findEntryByPath("/evennewertitle");
     QVERIFY(entry);
     QCOMPARE(entry->password(), QString("newpassword"));
+
+    // with line break in notes
+    setInput("a");
+    execCmd(editCmd, {"edit", m_dbFile->fileName(), "-n", "testing\\nline breaks", "/evennewertitle"});
+    db = readDatabase();
+    entry = db->rootGroup()->findEntryByPath("/evennewertitle");
+    QVERIFY(entry);
+    QCOMPARE(entry->notes(), QString("testing\nline breaks"));
 }
 
 void TestCli::testEstimate_data()
@@ -928,10 +972,10 @@ void TestCli::testExport()
     setInput("a");
     execCmd(exportCmd, {"export", "-f", "csv", m_dbFile->fileName()});
     QByteArray csvHeader = m_stdout->readLine();
-    QCOMPARE(csvHeader, QByteArray("\"Group\",\"Title\",\"Username\",\"Password\",\"URL\",\"Notes\"\n"));
+    QVERIFY(csvHeader.contains(QByteArray("\"Group\",\"Title\",\"Username\",\"Password\",\"URL\",\"Notes\"")));
     QByteArray csvData = m_stdout->readAll();
     QVERIFY(csvData.contains(QByteArray(
-        "\"NewDatabase\",\"Sample Entry\",\"User Name\",\"Password\",\"http://www.somesite.com/\",\"Notes\"\n")));
+        "\"NewDatabase\",\"Sample Entry\",\"User Name\",\"Password\",\"http://www.somesite.com/\",\"Notes\"")));
 
     // test invalid format
     setInput("a");
@@ -1013,7 +1057,7 @@ void TestCli::testImport()
     QString databaseFilename = testDir->path() + "/testImport1.kdbx";
 
     setInput({"a", "a"});
-    execCmd(importCmd, {"import", m_xmlFile->fileName(), databaseFilename});
+    execCmd(importCmd, {"import", m_xmlFile->fileName(), databaseFilename, "-p"});
 
     QCOMPARE(m_stderr->readLine(), QByteArray("Enter password to encrypt database (optional): \n"));
     QCOMPARE(m_stderr->readLine(), QByteArray("Repeat password: \n"));
@@ -1032,12 +1076,67 @@ void TestCli::testImport()
     QString errorMessage = QString("File " + databaseFilename + " already exists.\n");
     QCOMPARE(m_stderr->readAll(), errorMessage.toUtf8());
 
+    // Testing import with non-existing keyfile
+    databaseFilename = testDir->path() + "/testImport2.kdbx";
+    QString keyfilePath = testDir->path() + "/keyfile.txt";
+    setInput({"a", "a"});
+    execCmd(importCmd, {"import", "-p", "-k", keyfilePath, m_xmlFile->fileName(), databaseFilename});
+
+    QCOMPARE(m_stderr->readLine(), QByteArray("Enter password to encrypt database (optional): \n"));
+    QCOMPARE(m_stderr->readLine(), QByteArray("Repeat password: \n"));
+    QCOMPARE(m_stdout->readLine(), QByteArray("Successfully imported database.\n"));
+
+    db = readDatabase(databaseFilename, "a", keyfilePath);
+    QVERIFY(db);
+
+    // Testing import with existing keyfile
+    databaseFilename = testDir->path() + "/testImport3.kdbx";
+    setInput({"a", "a"});
+    execCmd(importCmd, {"import", "-p", "-k", keyfilePath, m_xmlFile->fileName(), databaseFilename});
+
+    QCOMPARE(m_stderr->readLine(), QByteArray("Enter password to encrypt database (optional): \n"));
+    QCOMPARE(m_stderr->readLine(), QByteArray("Repeat password: \n"));
+    QCOMPARE(m_stdout->readLine(), QByteArray("Successfully imported database.\n"));
+
+    db = readDatabase(databaseFilename, "a", keyfilePath);
+    QVERIFY(db);
+
+    // Invalid decryption time (format).
+    databaseFilename = testDir->path() + "/testCreate_time.kdbx";
+    execCmd(importCmd, {"import", "-p", "-t", "NAN", m_xmlFile->fileName(), databaseFilename});
+
+    QCOMPARE(m_stdout->readAll(), QByteArray());
+    QCOMPARE(m_stderr->readAll(), QByteArray("Invalid decryption time NAN.\n"));
+
+    // Invalid decryption time (range).
+    execCmd(importCmd, {"import", "-p", "-t", "10", m_xmlFile->fileName(), databaseFilename});
+
+    QCOMPARE(m_stdout->readAll(), QByteArray());
+    QVERIFY(m_stderr->readAll().contains(QByteArray("Target decryption time must be between")));
+
+    int encryptionTime = 500;
+    // Custom encryption time
+    setInput({"a", "a"});
+    int epochBefore = QDateTime::currentMSecsSinceEpoch();
+    execCmd(importCmd,
+            {"import", "-p", "-t", QString::number(encryptionTime), m_xmlFile->fileName(), databaseFilename});
+    // Removing 100ms to make sure we account for changes in computation time.
+    QVERIFY(QDateTime::currentMSecsSinceEpoch() > (epochBefore + encryptionTime - 100));
+
+    QCOMPARE(m_stderr->readLine(), QByteArray("Enter password to encrypt database (optional): \n"));
+    QCOMPARE(m_stderr->readLine(), QByteArray("Repeat password: \n"));
+    QCOMPARE(m_stdout->readLine(), QByteArray("Benchmarking key derivation function for 500ms delay.\n"));
+    QVERIFY(m_stdout->readLine().contains(QByteArray("rounds for key derivation function.\n")));
+
+    db = readDatabase(databaseFilename, "a");
+    QVERIFY(db);
+
     // Quiet option
     QScopedPointer<QTemporaryDir> testDirQuiet(new QTemporaryDir());
     QString databaseFilenameQuiet = testDirQuiet->path() + "/testImport2.kdbx";
 
     setInput({"a", "a"});
-    execCmd(importCmd, {"import", "-q", m_xmlFile->fileName(), databaseFilenameQuiet});
+    execCmd(importCmd, {"import", "-p", "-q", m_xmlFile->fileName(), databaseFilenameQuiet});
 
     QCOMPARE(m_stderr->readLine(), QByteArray("Enter password to encrypt database (optional): \n"));
     QCOMPARE(m_stderr->readLine(), QByteArray("Repeat password: \n"));
