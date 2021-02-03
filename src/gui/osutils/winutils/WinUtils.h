@@ -35,6 +35,7 @@ public:
     static WinUtils* instance();
 
     bool isDarkMode() const override;
+    bool isStatusBarDark() const override;
     bool isLaunchAtStartupEnabled() const override;
     void setLaunchAtStartup(bool enable) override;
     bool isCapslockEnabled() override;
@@ -70,6 +71,9 @@ private:
 
     int m_nextShortcutId = 1;
     QHash<QString, QSharedPointer<globalShortcut>> m_globalShortcuts;
+
+    bool m_darkAppThemeActive;
+    bool m_darkSystemThemeActive;
 
     Q_DISABLE_COPY(WinUtils)
 };
