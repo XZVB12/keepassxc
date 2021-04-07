@@ -51,12 +51,11 @@ public:
     int actionCount() override;
     void clearActions() override;
 
-    void addActionChar(AutoTypeChar* action);
-    void addActionKey(AutoTypeKey* action);
+    void addAction(const AutoTypeKey* action);
 
 private:
     QString m_activeWindowTitle;
-    QList<AutoTypeAction*> m_actionList;
+    int m_actionCount = 0;
     QString m_actionChars;
 };
 
@@ -65,8 +64,9 @@ class AutoTypeExecutorTest : public AutoTypeExecutor
 public:
     explicit AutoTypeExecutorTest(AutoTypePlatformTest* platform);
 
-    void execChar(AutoTypeChar* action) override;
-    void execKey(AutoTypeKey* action) override;
+    AutoTypeAction::Result execBegin(const AutoTypeBegin* action) override;
+    AutoTypeAction::Result execType(const AutoTypeKey* action) override;
+    AutoTypeAction::Result execClearField(const AutoTypeClearField* action) override;
 
 private:
     AutoTypePlatformTest* const m_platform;

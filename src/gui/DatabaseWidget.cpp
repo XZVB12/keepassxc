@@ -142,13 +142,13 @@ DatabaseWidget::DatabaseWidget(QSharedPointer<Database> db, QWidget* parent)
 
     // Add a notification for when we are searching
     m_searchingLabel->setObjectName("SearchBanner");
-    m_searchingLabel->setText(tr("Searching..."));
+    m_searchingLabel->setText(tr("Searching…"));
     m_searchingLabel->setAlignment(Qt::AlignCenter);
     m_searchingLabel->setVisible(false);
 
 #ifdef WITH_XC_KEESHARE
     m_shareLabel->setObjectName("KeeShareBanner");
-    m_shareLabel->setText(tr("Shared group..."));
+    m_shareLabel->setText(tr("Shared group…"));
     m_shareLabel->setAlignment(Qt::AlignCenter);
     m_shareLabel->setVisible(false);
 #endif
@@ -474,20 +474,20 @@ void DatabaseWidget::deleteSelectedEntries()
     deleteEntries(std::move(selectedEntries));
 }
 
-void DatabaseWidget::deleteEntries(QList<Entry*> selectedEntries)
+void DatabaseWidget::deleteEntries(QList<Entry*> selectedEntries, bool confirm)
 {
     // Confirm entry removal before moving forward
     auto* recycleBin = m_db->metadata()->recycleBin();
     bool permanent = (recycleBin && recycleBin->findEntryByUuid(selectedEntries.first()->uuid()))
                      || !m_db->metadata()->recycleBinEnabled();
 
-    if (!confirmDeleteEntries(selectedEntries, permanent)) {
+    if (confirm && !confirmDeleteEntries(selectedEntries, permanent)) {
         return;
     }
 
     // Find references to selected entries and prompt for direction if necessary
     auto it = selectedEntries.begin();
-    while (it != selectedEntries.end()) {
+    while (confirm && it != selectedEntries.end()) {
         auto references = m_db->rootGroup()->referencesRecursive(*it);
         if (!references.isEmpty()) {
             // Ignore references that are selected for deletion
@@ -759,44 +759,44 @@ void DatabaseWidget::removeFromAgent()
 }
 #endif
 
-void DatabaseWidget::performAutoType()
+void DatabaseWidget::performAutoType(const QString& sequence)
 {
     auto currentEntry = currentSelectedEntry();
     if (currentEntry) {
-        autoType()->performAutoType(currentEntry, window());
+        // TODO: Include name of previously active window in confirmation question
+        if (config()->get(Config::Security_AutoTypeAsk).toBool()
+            && MessageBox::question(
+                   this, tr("Confirm Auto-Type"), tr("Perform Auto-Type into the previously active window?"))
+                   != MessageBox::Yes) {
+            return;
+        }
+
+        if (sequence.isEmpty()) {
+            autoType()->performAutoType(currentEntry, window());
+        } else {
+            autoType()->performAutoTypeWithSequence(currentEntry, sequence, window());
+        }
     }
 }
 
 void DatabaseWidget::performAutoTypeUsername()
 {
-    auto currentEntry = currentSelectedEntry();
-    if (currentEntry) {
-        autoType()->performAutoTypeWithSequence(currentEntry, QStringLiteral("{USERNAME}"), window());
-    }
+    performAutoType(QStringLiteral("{USERNAME}"));
 }
 
 void DatabaseWidget::performAutoTypeUsernameEnter()
 {
-    auto currentEntry = currentSelectedEntry();
-    if (currentEntry) {
-        autoType()->performAutoTypeWithSequence(currentEntry, QStringLiteral("{USERNAME}{ENTER}"), window());
-    }
+    performAutoType(QStringLiteral("{USERNAME}{ENTER}"));
 }
 
 void DatabaseWidget::performAutoTypePassword()
 {
-    auto currentEntry = currentSelectedEntry();
-    if (currentEntry) {
-        autoType()->performAutoTypeWithSequence(currentEntry, QStringLiteral("{PASSWORD}"), window());
-    }
+    performAutoType(QStringLiteral("{PASSWORD}"));
 }
 
 void DatabaseWidget::performAutoTypePasswordEnter()
 {
-    auto currentEntry = currentSelectedEntry();
-    if (currentEntry) {
-        autoType()->performAutoTypeWithSequence(currentEntry, QStringLiteral("{PASSWORD}{ENTER}"), window());
-    }
+    performAutoType(QStringLiteral("{PASSWORD}{ENTER}"));
 }
 
 void DatabaseWidget::openUrl()
@@ -1440,7 +1440,7 @@ void DatabaseWidget::endSearch()
     }
 
     m_searchingLabel->setVisible(false);
-    m_searchingLabel->setText(tr("Searching..."));
+    m_searchingLabel->setText(tr("Searching…"));
 
     m_lastSearchText.clear();
 

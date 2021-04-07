@@ -43,8 +43,10 @@ public:
                                 QString* error = nullptr) override;
     bool unregisterGlobalShortcut(const QString& name) override;
 
-signals:
-    void keymapChanged();
+    bool canPreventScreenCapture() const override
+    {
+        return false;
+    }
 
 private:
     explicit NixUtils(QObject* parent = nullptr);

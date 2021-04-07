@@ -33,7 +33,6 @@ endif(NOT ZXCVBN_LIBRARIES)
 set(keepassx_SOURCES
         core/Alloc.cpp
         core/AutoTypeAssociations.cpp
-        core/AutoTypeMatch.cpp
         core/Base32.cpp
         core/Bootstrap.cpp
         core/Clock.cpp
@@ -68,7 +67,6 @@ set(keepassx_SOURCES
         crypto/CryptoHash.cpp
         crypto/Random.cpp
         crypto/SymmetricCipher.cpp
-        crypto/SymmetricCipherGcrypt.cpp
         crypto/kdf/Kdf.cpp
         crypto/kdf/AesKdf.cpp
         crypto/kdf/Argon2Kdf.cpp
@@ -139,8 +137,6 @@ set(keepassx_SOURCES
         gui/csvImport/CsvImportWizard.cpp
         gui/csvImport/CsvParserModel.cpp
         gui/entry/AutoTypeAssociationsModel.cpp
-        gui/entry/AutoTypeMatchModel.cpp
-        gui/entry/AutoTypeMatchView.cpp
         gui/entry/EditEntryWidget.cpp
         gui/entry/EntryAttachmentsModel.cpp
         gui/entry/EntryAttachmentsWidget.cpp
@@ -158,6 +154,7 @@ set(keepassx_SOURCES
         gui/dbsettings/DatabaseSettingsWidget.cpp
         gui/dbsettings/DatabaseSettingsDialog.cpp
         gui/dbsettings/DatabaseSettingsWidgetGeneral.cpp
+        gui/dbsettings/DatabaseSettingsWidgetMaintenance.cpp
         gui/dbsettings/DatabaseSettingsWidgetMetaDataSimple.cpp
         gui/dbsettings/DatabaseSettingsWidgetEncryption.cpp
         gui/dbsettings/DatabaseSettingsWidgetDatabaseKey.cpp
@@ -184,7 +181,6 @@ set(keepassx_SOURCES
         keys/FileKey.cpp
         keys/PasswordKey.cpp
         keys/YkChallengeResponseKey.cpp
-        keys/YkChallengeResponseKeyCLI.cpp
         streams/HashedBlockStream.cpp
         streams/HmacBlockStream.cpp
         streams/LayeredStream.cpp
@@ -249,11 +245,6 @@ add_subdirectory(cli)
 add_subdirectory(qrcode)
 set(qrcode_LIB qrcode)
 
-add_subdirectory(crypto/ssh)
-if(WITH_XC_CRYPTO_SSH)
-    set(crypto_ssh_LIB crypto_ssh)
-endif()
-
 add_subdirectory(keeshare)
 if(WITH_XC_KEESHARE)
     set(keeshare_LIB keeshare)
@@ -273,11 +264,11 @@ set(autotype_SOURCES
         core/Tools.cpp
         autotype/AutoType.cpp
         autotype/AutoTypeAction.cpp
-        autotype/AutoTypeFilterLineEdit.cpp
+        autotype/AutoTypeMatchModel.cpp
+        autotype/AutoTypeMatchView.cpp
         autotype/AutoTypeSelectDialog.cpp
-        autotype/AutoTypeSelectView.cpp
+        autotype/PickcharsDialog.cpp
         autotype/ShortcutWidget.cpp
-        autotype/WildcardMatcher.cpp
         autotype/WindowSelectComboBox.cpp)
 
 if(MINGW)
@@ -324,10 +315,9 @@ target_link_libraries(keepassx_core
         Qt5::Concurrent
         Qt5::Network
         Qt5::Widgets
-        ${sodium_LIBRARY_RELEASE}
+        ${BOTAN2_LIBRARIES}
         ${YUBIKEY_LIBRARIES}
         ${ZXCVBN_LIBRARIES}
-        ${ARGON2_LIBRARIES}
         ${ZLIB_LIBRARIES}
 	)
 
@@ -372,7 +362,6 @@ if(MINGW)
 endif()
 
 add_executable(${PROGNAME} WIN32 ${keepassx_SOURCES_MAINEXE} ${WIN32_ProductVersionFiles})
-target_link_libraries(keepassx_core ${GCRYPT_LIBRARIES} ${GPGERROR_LIBRARIES})
 target_link_libraries(${PROGNAME} keepassx_core)
 
 set_target_properties(${PROGNAME} PROPERTIES ENABLE_EXPORTS ON)
@@ -406,7 +395,7 @@ if(APPLE AND WITH_APP_BUNDLE)
 
     add_custom_command(TARGET ${PROGNAME}
             POST_BUILD
-            COMMAND ${MACDEPLOYQT_EXE} ${PROGNAME}.app
+            COMMAND ${MACDEPLOYQT_EXE} ${PROGNAME}.app 2> /dev/null
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/src
             COMMENT "Deploying app bundle")
 endif()
@@ -499,7 +488,7 @@ if(MINGW)
 
         find_file(CRYPTO_DLL NAMES libcrypto-1_1.dll libcrypto-1_1-x64.dll)
         if (NOT CRYPTO_DLL)
-            message(FATAL_ERROR "Cannot find libcrypto dll, ensure libgcrypt is properly installed.")
+            message(FATAL_ERROR "Cannot find libcrypto dll, ensure openssl is properly installed.")
         endif()
 
         install(FILES ${OPENSSL_DLL} ${CRYPTO_DLL} DESTINATION ".")

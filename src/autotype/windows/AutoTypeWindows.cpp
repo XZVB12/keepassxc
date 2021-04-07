@@ -17,6 +17,7 @@
  */
 
 #include "AutoTypeWindows.h"
+#include "core/Tools.h"
 #include "gui/osutils/OSUtils.h"
 
 #include <VersionHelpers.h>
@@ -225,36 +226,51 @@ AutoTypeExecutorWin::AutoTypeExecutorWin(AutoTypePlatformWin* platform)
 {
 }
 
-void AutoTypeExecutorWin::execChar(AutoTypeChar* action)
-{
-    m_platform->sendChar(action->character, true);
-    m_platform->sendChar(action->character, false);
-}
-
-void AutoTypeExecutorWin::execKey(AutoTypeKey* action)
-{
-    m_platform->sendKey(action->key, true);
-    m_platform->sendKey(action->key, false);
-}
-
-void AutoTypeExecutorWin::execClearField(AutoTypeClearField* action = nullptr)
+AutoTypeAction::Result AutoTypeExecutorWin::execBegin(const AutoTypeBegin* action)
 {
     Q_UNUSED(action);
+    return AutoTypeAction::Result::Ok();
+}
 
-    m_platform->sendKey(Qt::Key_Control, true);
-    m_platform->sendKey(Qt::Key_Home, true);
-    m_platform->sendKey(Qt::Key_Home, false);
-    m_platform->sendKey(Qt::Key_Control, false);
-    ::Sleep(25);
-    m_platform->sendKey(Qt::Key_Control, true);
-    m_platform->sendKey(Qt::Key_Shift, true);
-    m_platform->sendKey(Qt::Key_End, true);
-    m_platform->sendKey(Qt::Key_End, false);
-    m_platform->sendKey(Qt::Key_Shift, false);
-    m_platform->sendKey(Qt::Key_Control, false);
-    ::Sleep(25);
-    m_platform->sendKey(Qt::Key_Backspace, true);
-    m_platform->sendKey(Qt::Key_Backspace, false);
+AutoTypeAction::Result AutoTypeExecutorWin::execType(const AutoTypeKey* action)
+{
+    if (action->modifiers & Qt::ShiftModifier) {
+        m_platform->sendKey(Qt::Key_Shift, true);
+    }
+    if (action->modifiers & Qt::ControlModifier) {
+        m_platform->sendKey(Qt::Key_Control, true);
+    }
+    if (action->modifiers & Qt::AltModifier) {
+        m_platform->sendKey(Qt::Key_Alt, true);
+    }
 
-    ::Sleep(25);
+    if (action->key != Qt::Key_unknown) {
+        m_platform->sendKey(action->key, true);
+        m_platform->sendKey(action->key, false);
+    } else {
+        m_platform->sendChar(action->character, true);
+        m_platform->sendChar(action->character, false);
+    }
+
+    if (action->modifiers & Qt::ShiftModifier) {
+        m_platform->sendKey(Qt::Key_Shift, false);
+    }
+    if (action->modifiers & Qt::ControlModifier) {
+        m_platform->sendKey(Qt::Key_Control, false);
+    }
+    if (action->modifiers & Qt::AltModifier) {
+        m_platform->sendKey(Qt::Key_Alt, false);
+    }
+
+    Tools::sleep(execDelayMs);
+    return AutoTypeAction::Result::Ok();
+}
+
+AutoTypeAction::Result AutoTypeExecutorWin::execClearField(const AutoTypeClearField* action)
+{
+    Q_UNUSED(action);
+    execType(new AutoTypeKey(Qt::Key_Home, Qt::ControlModifier));
+    execType(new AutoTypeKey(Qt::Key_End, Qt::ControlModifier | Qt::ShiftModifier));
+    execType(new AutoTypeKey(Qt::Key_Backspace));
+    return AutoTypeAction::Result::Ok();
 }

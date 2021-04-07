@@ -20,11 +20,15 @@
 #define KEEPASSX_MAINWINDOW_H
 
 #include <QActionGroup>
+#include <QLabel>
 #include <QMainWindow>
+#include <QProgressBar>
+#include <QStatusBar>
 #include <QSystemTrayIcon>
 
 #include "core/SignalMultiplexer.h"
 #include "gui/Application.h"
+#include "gui/Clipboard.h"
 #include "gui/DatabaseWidget.h"
 #include "gui/osutils/ScreenLockListener.h"
 
@@ -60,6 +64,11 @@ public:
         PasswordGeneratorScreen = 3
     };
 
+signals:
+    void databaseUnlocked(DatabaseWidget* dbWidget);
+    void databaseLocked(DatabaseWidget* dbWidget);
+    void activeDatabaseChanged(DatabaseWidget* dbWidget);
+
 public slots:
     void openDatabase(const QString& filePath, const QString& password = {}, const QString& keyfile = {});
     void appExit();
@@ -82,6 +91,7 @@ public slots:
     void bringToFront();
     void closeAllDatabases();
     void lockAllDatabases();
+    void closeModalWindow();
     void displayDesktopNotification(const QString& msg, QString title = "", int msTimeoutHint = 10000);
     void restartApp(const QString& message);
 
@@ -136,9 +146,8 @@ private slots:
     void obtainContextFocusLock();
     void releaseContextFocusLock();
     void agentEnabled(bool enabled);
-
-private slots:
     void updateTrayIcon();
+    void updateProgressBar(int percentage, QString message);
 
 private:
     static void setShortcut(QAction* action, QKeySequence::StandardKey standard, int fallback = 0);
@@ -170,6 +179,8 @@ private:
     QPointer<QSystemTrayIcon> m_trayIcon;
     QPointer<ScreenLockListener> m_screenLockListener;
     QPointer<SearchWidget> m_searchWidget;
+    QPointer<QProgressBar> m_progressBar;
+    QPointer<QLabel> m_progressBarLabel;
 
     Q_DISABLE_COPY(MainWindow)
 

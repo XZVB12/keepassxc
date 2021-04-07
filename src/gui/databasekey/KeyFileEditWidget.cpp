@@ -16,13 +16,13 @@
  */
 
 #include "KeyFileEditWidget.h"
+#include "ui_KeyComponentWidget.h"
 #include "ui_KeyFileEditWidget.h"
-#include <gui/dbsettings/DatabaseSettingsWidget.h>
 
 #include "gui/FileDialog.h"
 #include "gui/MainWindow.h"
 #include "gui/MessageBox.h"
-#include "keys/CompositeKey.h"
+#include "gui/dbsettings/DatabaseSettingsWidget.h"
 #include "keys/FileKey.h"
 
 KeyFileEditWidget::KeyFileEditWidget(DatabaseSettingsWidget* parent)
@@ -30,9 +30,7 @@ KeyFileEditWidget::KeyFileEditWidget(DatabaseSettingsWidget* parent)
     , m_compUi(new Ui::KeyFileEditWidget())
     , m_parent(parent)
 {
-    setComponentName(tr("Key File"));
-    setComponentDescription(tr("<p>You can add a key file containing random bytes for additional security.</p>"
-                               "<p>You must keep it secret and never lose it or you will be locked out!</p>"));
+    initComponent();
 }
 
 KeyFileEditWidget::~KeyFileEditWidget()
@@ -90,6 +88,20 @@ void KeyFileEditWidget::initComponentEditWidget(QWidget* widget)
     m_compUi->keyFileCombo->setFocus();
 }
 
+void KeyFileEditWidget::initComponent()
+{
+    // These need to be set in total for each credential type for translation purposes
+    m_ui->groupBox->setTitle(tr("Key File"));
+    m_ui->addButton->setText(tr("Add Key File"));
+    m_ui->changeButton->setText(tr("Change Key File"));
+    m_ui->removeButton->setText(tr("Remove Key File"));
+    m_ui->changeOrRemoveLabel->setText(tr("Key File set, click to change or remove"));
+
+    m_ui->componentDescription->setText(
+        tr("<p>You can add a key file containing random bytes for additional security.</p>"
+           "<p>You must keep it secret and never lose it or you will be locked out.</p>"));
+}
+
 void KeyFileEditWidget::createKeyFile()
 {
     Q_ASSERT(m_compEditWidget);
@@ -97,7 +109,7 @@ void KeyFileEditWidget::createKeyFile()
         return;
     }
     QString filters = QString("%1 (*.keyx; *.key);;%2 (*)").arg(tr("Key files"), tr("All files"));
-    QString fileName = fileDialog()->getSaveFileName(this, tr("Create Key File..."), QString(), filters);
+    QString fileName = fileDialog()->getSaveFileName(this, tr("Create Key File…"), QString(), filters);
 
     if (!fileName.isEmpty()) {
         QString errorMsg;

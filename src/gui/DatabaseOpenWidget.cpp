@@ -280,13 +280,14 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::buildDatabaseKey()
         databaseKey->clear();
 
         // try to get, decrypt and use PasswordKey
-        QSharedPointer<QByteArray> passwordKey = TouchID::getInstance().getKey(m_filename);
-        if (passwordKey != NULL) {
+        QByteArray passwordKey;
+        if (TouchID::getInstance().getKey(m_filename, passwordKey)) {
             // check if the user cancelled the operation
-            if (passwordKey.isNull())
+            if (passwordKey.isNull()) {
                 return QSharedPointer<CompositeKey>();
+            }
 
-            databaseKey->addKey(PasswordKey::fromRawKey(*passwordKey));
+            databaseKey->addKey(PasswordKey::fromRawKey(passwordKey));
         }
     }
 #endif
@@ -309,7 +310,7 @@ QSharedPointer<CompositeKey> DatabaseOpenWidget::buildDatabaseKey()
             legacyWarning.setText(tr("You are using an old key file format which KeePassXC may<br>"
                                      "stop supporting in the future.<br><br>"
                                      "Please consider generating a new key file by going to:<br>"
-                                     "<strong>Database / Database Security / Change Key File.</strong><br>"));
+                                     "<strong>Database &gt; Database Security &gt; Change Key File.</strong><br>"));
             legacyWarning.setIcon(QMessageBox::Icon::Warning);
             legacyWarning.addButton(QMessageBox::Ok);
             legacyWarning.setDefaultButton(QMessageBox::Ok);

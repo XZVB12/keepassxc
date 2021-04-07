@@ -94,6 +94,7 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::GUI_MovableToolbar, {QS("GUI/MovableToolbar"), Roaming, false}},
     {Config::GUI_HideGroupsPanel, {QS("GUI/HideGroupsPanel"), Roaming, false}},
     {Config::GUI_HidePreviewPanel, {QS("GUI/HidePreviewPanel"), Roaming, false}},
+    {Config::GUI_AlwaysOnTop, {QS("GUI/GUI_AlwaysOnTop"), Roaming, false}},
     {Config::GUI_ToolButtonStyle, {QS("GUI/ToolButtonStyle"), Roaming, Qt::ToolButtonIconOnly}},
     {Config::GUI_ShowTrayIcon, {QS("GUI/ShowTrayIcon"), Roaming, false}},
     {Config::GUI_TrayIconAppearance, {QS("GUI/TrayIconAppearance"), Roaming, {}}},
@@ -146,7 +147,6 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     {Config::Browser_BestMatchOnly, {QS("Browser/BestMatchOnly"), Roaming, false}},
     {Config::Browser_UnlockDatabase, {QS("Browser/UnlockDatabase"), Roaming, true}},
     {Config::Browser_MatchUrlScheme, {QS("Browser/MatchUrlScheme"), Roaming, true}},
-    {Config::Browser_SortByUsername, {QS("Browser/SortByUsername"), Roaming, false}},
     {Config::Browser_SupportBrowserProxy, {QS("Browser/SupportBrowserProxy"), Roaming, true}},
     {Config::Browser_UseCustomProxy, {QS("Browser/UseCustomProxy"), Roaming, false}},
     {Config::Browser_CustomProxyLocation, {QS("Browser/CustomProxyLocation"), Roaming, {}}},
@@ -173,7 +173,8 @@ static const QHash<Config::ConfigKey, ConfigDirective> configStrings = {
     // FdoSecrets
     {Config::FdoSecrets_Enabled, {QS("FdoSecrets/Enabled"), Roaming, false}},
     {Config::FdoSecrets_ShowNotification, {QS("FdoSecrets/ShowNotification"), Roaming, true}},
-    {Config::FdoSecrets_NoConfirmDeleteItem, {QS("FdoSecrets/NoConfirmDeleteItem"), Roaming, false}},
+    {Config::FdoSecrets_ConfirmDeleteItem, {QS("FdoSecrets/ConfirmDeleteItem"), Roaming, true}},
+    {Config::FdoSecrets_ConfirmAccessItem, {QS("FdoSecrets/ConfirmAccessItem"), Roaming, true}},
 
     // KeeShare
     {Config::KeeShare_QuietSuccess, {QS("KeeShare/QuietSuccess"), Roaming, false}},
